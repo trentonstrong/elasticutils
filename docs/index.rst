@@ -27,8 +27,38 @@ Search Query
 
 Filters
 -------
-``Q('taco trucks').filer(style='korean')`` will do a query for "taco trucks"
+
+``Q('taco trucks').filter(style='korean')`` will do a query for "taco trucks"
 filtering on the attribute ``style``.  This is how we find Korean Taco Trucks.
+
+*Note*: Repeat calls to ``.filter`` will reset the filters.
+
+Multiple Filters
+~~~~~~~~~~~~~~~~
+
+``Q('taco trucks').filter(style='korean', price='FREE')``
+will do a query for "taco trucks" that are
+"korean" style and have a price of
+"FREE".
+
+This is however equivalent to the more succinct::
+
+Q('taco trucks', style='korean', price='FREE')
+
+Complicate Filtering
+~~~~~~~~~~~~~~~~~~~~
+
+Sometimes you want something complicated.  For that we have the ``F`` (filter)
+object.
+
+``Q('taco trucks').filter(F(style='korean')|F(style='thai'))``
+will find you "thai" or "korean" style taco trucks.
+
+Let's say you only want "korean" tacos if you can get it for "FREE" or "thai"
+tacos at any price::
+
+Q('taco trucks').filter(F(style='korean', price='FREE')|F(style='thai'))
+
 
 Facets
 ------
