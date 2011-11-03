@@ -172,6 +172,7 @@ class S(object):
         self._query_fields = set()
         self._highlight_fields = []
         self._highlight_options = {}
+        self._weights = {}
 
     def __repr__(self):
         data = list(self)[:REPR_OUTPUT_SIZE + 1]
@@ -183,6 +184,7 @@ class S(object):
         new = self.__class__(self.type)
         new.steps = list(self.steps)
         new._query_fields = self._query_fields.copy()
+        new._weights = self._weights.copy()
         if next_step:
             new.steps.append(next_step)
         new.start = self.start
@@ -227,6 +229,29 @@ class S(object):
         if len(args) != 1:
             return TypeError('query() takes at most one non-keyword argument.')
         return self._clone(next_step=('query_default_fields', args[0]))
+
+    def weight(self, **kw):
+        """
+        Set the per-field boosting of results.
+
+        For example::
+
+            s = S().weight(summary__text=0.8, heat=3)
+
+        Weights given here are added to any defaults or any previously
+        specified weights, though later references to the same field override
+        earlier ones.
+
+        Weights apply only to fields mentioned in the call to ``query()`` or
+        implicitly used due to a previous call to ``query_fields``.
+
+        Note: If we need to clear weights, add a ``clear_weights()`` method. If
+        we ever need index boosting, ``weight_indices()`` might be nice.
+
+        """
+        new = self._clone()
+        new._weights.update(kw)
+        return new
 
     def filter(self, *filters, **kw):
         """
@@ -428,22 +453,35 @@ class S(object):
             ret['post_tags'] = [options['after_match']]
         return ret
 
+    _action_map = {None: 'term',
+                   'startswith': 'prefix',
+                   'text': 'text',
+                   'fuzzy': 'fuzzy'}
+
     def _process_queries(self, value):
+        def _weighted_key_value(value):
+            """
+            Return a key-value pair in the format ES queries need.
+
+            Weight the pair according to any previous calls to ``weight()``.
+
+            """
+            if key in self._weights:
+                return {field: {'boost': self._weights[key],
+                                'query' if action == 'text' else 'value':
+                                    value}}
+            return {field: value}
+
         rv = []
         value = dict(value)
         or_ = value.pop('or_', [])
         for key, val in value.items():
-            key, field_action = _split(key)
-            if field_action is None:
-                rv.append({'term': {key: val}})
-            elif field_action == 'text':
-                rv.append({'text': {key: val}})
-            elif field_action == 'startswith':
-                rv.append({'prefix': {key: val}})
-            elif field_action in ('gt', 'gte', 'lt', 'lte'):
-                rv.append({'range': {key: {field_action: val}}})
-            elif field_action == 'fuzzy':
-                rv.append({'fuzzy': {key: val}})
+            field, action = _split(key)
+            if action in ('gt', 'gte', 'lt', 'lte'):
+                rv.append(
+                    {'range': {field: _weighted_key_value({action: val})}})
+            else:
+                rv.append({self._action_map[action]: _weighted_key_value(val)})
         if or_:
             rv.append({'bool': {'should': self._process_queries(or_.items())}})
         return rv

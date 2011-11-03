@@ -147,6 +147,54 @@ class QueryTest(TestCase):
         es.delete_index('test')
 
 
+def test_weight_term():
+    """Test that weights are properly applied to term queries."""
+    eq_(S(FakeModel).weight(fld1=2)
+                    .query(fld1='qux')
+                    ._build_query(),
+        {"query":
+            {"term": {"fld1": {"value": "qux", "boost": 2}}},
+         "fields":
+            ["id"]})
+
+
+def test_weight_text():
+    """Test that weights are properly applied to text queries."""
+    eq_(S(FakeModel).weight(fld2__text=7)
+                    .query(fld2__text='qux')
+                    ._build_query(),
+        {"query":
+            {"text": {"fld2": {"query": "qux", "boost": 7}}},
+         "fields":
+            ["id"]})
+
+
+def test_weight_startswith():
+    """Test that weights are properly applied to prefix queries."""
+    eq_(S(FakeModel).query(fld4__startswith='qux')
+                    .weight(fld4__startswith=3)
+                    ._build_query(),
+        {"query":
+            {"prefix": {"fld4": {"value": "qux", "boost": 3}}},
+         "fields":
+            ["id"]})
+
+
+def test_weight_multiple():
+    """Test that multiple weights are properly applied."""
+    eq_(S(FakeModel).query_fields('fld1', 'fld2__text')
+                    .weight(fld1=2, fld2__text=7)
+                    .query('qux')
+                    ._build_query(),
+        {"query":
+            {"bool":
+                {"should":
+                    [{"text": {"fld2": {"query": "qux", "boost": 7}}},
+                     {"term": {"fld1": {"value": "qux", "boost": 2}}}]}},
+         "fields":
+            ["id"]})
+
+
 def test_query_fields():
     """Make sure queries against a default set of fields works."""
     implicit = S(FakeModel).query_fields('fld1', 'fld2__text').query('boo')
