@@ -6,7 +6,7 @@ Also run elastic search on the default ports locally.
 from unittest import TestCase
 
 from elasticutils import F, S, get_es
-from nose.tools import eq_
+from nose.tools import eq_, assert_raises
 
 
 class Meta(object):
@@ -103,3 +103,17 @@ class QueryTest(TestCase):
     def teardown_class(cls):
         es = get_es()
         es.delete_index('test')
+
+
+def test_query_fields():
+    """Make sure queries against a default set of fields works."""
+    implicit = S(FakeModel).query_fields('fld1', 'fld2__text').query('boo')
+    explicit = S(FakeModel).query(or_=dict(fld1='boo', fld2__text='boo'))
+    eq_(implicit._build_query(), explicit._build_query())
+
+
+def test_query_type_error():
+    """``query()`` should throw a ``TypeError`` when called with neither or
+    both args and kwargs."""
+    assert_raises(TypeError, S(FakeModel).query)
+    assert_raises(TypeError, S(FakeModel).query, 'hey', frob='yo')

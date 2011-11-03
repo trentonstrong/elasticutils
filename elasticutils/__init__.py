@@ -168,6 +168,7 @@ class S(object):
         self.stop = None
         self.as_list = self.as_dict = False
         self._results_cache = None
+        self._query_fields = set()
 
     def __repr__(self):
         data = list(self)[:REPR_OUTPUT_SIZE + 1]
@@ -178,6 +179,7 @@ class S(object):
     def _clone(self, next_step=None):
         new = self.__class__(self.type)
         new.steps = list(self.steps)
+        new._query_fields = self._query_fields.copy()
         if next_step:
             new.steps.append(next_step)
         new.start = self.start
@@ -204,12 +206,22 @@ class S(object):
         """
         return self._clone(next_step=('order_by', fields))
 
-    def query(self, **kw):
+    def query(self, *args, **kw):
         """
         Returns a new S instance with the query args combined to the existing
         set.
+
+        Take either a single arg (which is text to be matched against any of
+        the fields specified by ``query_fields()``) or a series of kwargs
+        which set comparison values for each field separately.
         """
-        return self._clone(next_step=('query', kw.items()))
+        if bool(args) == bool(kw):
+            raise TypeError('query() takes either an arg or one or more kwargs.')
+        if kw:
+            return self._clone(next_step=('query', kw.items()))
+        if len(args) != 1:
+            return TypeError('query() takes at most one non-keyword argument.')
+        return self._clone(next_step=('query_default_fields', args[0]))
 
     def filter(self, *filters, **kw):
         """
@@ -224,6 +236,26 @@ class S(object):
         set.
         """
         return self._clone(next_step=('facet', kw.items()))
+
+    def query_fields(self, *args):
+        """
+        Add to the fields that a single-arg call to ``query()`` will query.
+
+        A call like this... ::
+
+            s.query_fields('a', 'b__text').query('woot')
+
+        is equivalent to... ::
+
+            s.query(or_=dict(a='woot', b='woot'))
+
+        """
+        new = self._clone()
+        # Use a dedicated field for the query_fields so we're guaranteed to
+        # have them in place before _build_query() processes any query() steps
+        # that use them.
+        new._query_fields |= set(args)
+        return new
 
     def extra(self, **kw):
         """
@@ -293,6 +325,9 @@ class S(object):
                 as_list, as_dict = False, True
             elif action == 'query':
                 queries.extend(self._process_queries(value))
+            elif action == 'query_default_fields':
+                queries.extend(self._process_queries(
+                    {'or_': dict((f, value) for f in self._query_fields)}))
             elif action == 'filter':
                 filters.extend(_process_filters(value))
             elif action == 'facet':
