@@ -3,8 +3,12 @@ from functools import wraps
 from threading import local
 from operator import itemgetter
 
+from pyes.urllib3.connectionpool import TimeoutError
 from pyes import ES, exceptions
+
 from pyes.es import thrift_enable
+from time import sleep
+
 
 try:
     from statsd import statsd
@@ -380,8 +384,13 @@ class S(object):
         es = get_es()
         index = (settings.ES_INDEXES.get(self.type)
                  or settings.ES_INDEXES['default'])
+        
+        retries = getattr(settings, 'ES_RETRY', 0)
+        retry_wait = getattr(settings, "ES_RETRY_INTERVAL", 0)
+        
         try:
-            hits = es.search(qs, index, self.type._meta.db_table)
+            hits = self.retry_on_timeout(es.search,
+                        [qs, index, self.type._meta.db_table], retries, retry_wait)
         except Exception:
             log.error(qs)
             raise
@@ -389,6 +398,23 @@ class S(object):
             statsd.timing('search', hits['took'])
         log.debug('[%s] %s' % (hits['took'], qs))
         return hits
+
+    def retry_on_timeout(self, fn, args, max_retry=0, retry_wait=0):
+        tries = 0;
+        while True:
+            try:
+                tries += 1
+                return fn(*args)                
+            except TimeoutError as e:
+                log.error("ES query({0}) Attempt: {3} timed out, {1}\r\n=={2}"
+                        .format(args,
+                            "retrying" if tries<=max_retry else "returning",
+                            e, tries
+                        ))
+                if tries>max_retry:
+                    raise e
+                sleep(retry_wait)
+                continue
 
     def __iter__(self):
         return iter(self._do_search())
