@@ -106,7 +106,7 @@ def _process_filters(filters):
             key, val = f
             key, field_action = _split(key)
             if key == 'or_':
-                rv.append({'or':_process_filters(val.items())})
+                rv.append({'or': _process_filters(val.items())})
             elif field_action is None:
                 rv.append({'term': {key: val}})
             elif field_action == 'in':
@@ -124,7 +124,7 @@ class F(object):
         if filters:
             items = _process_filters(filters.items())
             if len(items) > 1:
-                self.filters = {'and': items }
+                self.filters = {'and': items}
             else:
                 self.filters = items[0]
         else:
@@ -384,13 +384,13 @@ class S(object):
         es = get_es()
         index = (settings.ES_INDEXES.get(self.type)
                  or settings.ES_INDEXES['default'])
-        
+
         retries = getattr(settings, 'ES_RETRY', 0)
         retry_wait = getattr(settings, "ES_RETRY_INTERVAL", 0)
-        
+
         try:
-            hits = self.retry_on_timeout(es.search,
-                        [qs, index, self.type._meta.db_table], retries, retry_wait)
+            args = [qs, index, self.type._meta.db_table]
+            hits = self.retry_on_timeout(es.search, args, retries, retry_wait)
         except Exception:
             log.error(qs)
             raise
@@ -400,18 +400,18 @@ class S(object):
         return hits
 
     def retry_on_timeout(self, fn, args, max_retry=0, retry_wait=0):
-        tries = 0;
+        tries = 0
         while True:
             try:
                 tries += 1
-                return fn(*args)                
+                return fn(*args)
             except TimeoutError as e:
                 log.error("ES query({0}) Attempt: {3} timed out, {1}\r\n=={2}"
                         .format(args,
-                            "retrying" if tries<=max_retry else "returning",
+                            "retrying" if tries <= max_retry else "returning",
                             e, tries
                         ))
-                if tries>max_retry:
+                if tries > max_retry:
                     raise e
                 sleep(retry_wait)
                 continue
