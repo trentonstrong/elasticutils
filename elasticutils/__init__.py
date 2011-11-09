@@ -399,7 +399,7 @@ class S(object):
                 return fn(*args)
             except TimeoutError as e:
                 if statsd:
-                    statsd.increment('search_timeout_retry_%s' % tries)
+                    statsd.increment('search.timeout.retry%s' % tries)
                 log.error("ES query({0}) Attempt: {3} timed out, {1}\r\n=={2}"
                         .format(args,
                             "retrying" if tries <= max_retry else "returning",
