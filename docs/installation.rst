@@ -45,3 +45,19 @@ Configure
 
         ES_INDEXES = {'default': 'main_index',
                       'splugs': 'splugs_index'}
+
+.. data:: ES_RETRY
+    
+    Number of times to retry an elastic search query that has timed out
+        
+        Example:
+        
+        ES_RETRY = 2  # retry 2 times before raising the timeout exception
+
+.. data:: ES_RETRY_INTERVAL
+
+    Interval, in seconds, to wait between each retry.
+        
+        Example:
+        
+        ES_RETRY_INTERVAL = 0.1   # 1/10 of second
