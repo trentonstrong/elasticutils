@@ -63,7 +63,25 @@ Configure
         ES_INDEXES = {'default': 'main_index',
                       'splugs': 'splugs_index'}
 
+
     Assuming you have a `Splug` model which has a `Splug._meta.db_table`
     value of `splugs`, then ElasticUtils will run queries for `Splug` in
     the `splugs_index`.  ElasticUtils will run queries for other models in
     `main_index` because that's the default.
+
+.. data:: ES_RETRY
+    
+    Number of times to retry an elastic search query that has timed out
+        
+        Example:
+        
+        ES_RETRY = 2  # retry 2 times before raising the timeout exception
+
+.. data:: ES_RETRY_INTERVAL
+
+    Interval, in seconds, to wait between each retry.
+        
+        Example:
+        
+        ES_RETRY_INTERVAL = 0.1   # 1/10 of second
+
