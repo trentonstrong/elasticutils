@@ -292,7 +292,7 @@ class S(object):
         fields = ['id']
         facets = {}
         as_list = as_dict = as_obj = False
-        for action, value in self.steps:
+        for action, value in self.steps:            
             if action == 'order_by':
                 sort = []
                 for key in value:
@@ -310,7 +310,7 @@ class S(object):
                     fields.extend(value)
                 as_list, as_dict = False, True
             elif action == 'values_obj':
-                fields.extend(value)
+                fields.extend(value)                
                 as_list, as_dict, as_obj = False, False, True
             elif action == 'query':
                 queries.extend(self._process_queries(value))
@@ -504,7 +504,7 @@ class ObjectHybridSearchResults(SearchResults):
         self.objects = []
         for h in hits:            
             o = objs[int(h['_id'])]
-            if o.search_meta:
+            if o.search_meta:                
                 for f in self.fields:
                    o.search_meta[f] = h['fields'].get(f,0)
             self.objects.append(o)
@@ -514,3 +514,13 @@ class ObjectHybridSearchResults(SearchResults):
         objs = dict((obj.id, obj) for obj in self.objects)
         return (objs[id] for id in self.ids if id in objs)
 
+
+
+class SearchMixin(object):
+
+    def __init__(self):
+        self.search_meta = { 'id': 0 }
+    
+    @classmethod
+    def search(cls):
+        return S(cls)
