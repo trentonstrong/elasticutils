@@ -176,7 +176,7 @@ class S(object):
         self.steps = []
         self.start = 0
         self.stop = None
-        self.as_list = self.as_dict = False
+        self.as_list = self.as_dict = self.as_obj = False
         self._results_cache = None
 
     def __repr__(self):
@@ -208,6 +208,14 @@ class S(object):
         """
         return self._clone(next_step=('values_dict', fields))
 
+    def values_obj(self, *fields):
+        """
+        Returns a new S instance whose SearchResults will be of the class
+        ObjectHybridSearchResults.  This option is special, because it merges
+        these elasticsearch values into the result object.
+        """
+        return self._clone(next_step=('values_obj', fields))
+        
     def order_by(self, *fields):
         """
         Returns a new S instance with the ordering changed.
@@ -283,7 +291,7 @@ class S(object):
         sort = []
         fields = ['id']
         facets = {}
-        as_list = as_dict = False
+        as_list = as_dict = as_obj = False
         for action, value in self.steps:
             if action == 'order_by':
                 sort = []
@@ -301,6 +309,9 @@ class S(object):
                 else:
                     fields.extend(value)
                 as_list, as_dict = False, True
+            elif action == 'values_obj':
+                fields.extend(value)
+                as_list, as_dict, as_obj = False, False, True
             elif action == 'query':
                 queries.extend(self._process_queries(value))
             elif action == 'filter':
@@ -336,7 +347,9 @@ class S(object):
         if self.stop is not None:
             qs['size'] = self.stop - self.start
 
-        self.fields, self.as_list, self.as_dict = fields, as_list, as_dict
+        self.fields, self.as_list, self.as_dict, self.as_obj = \
+            fields, as_list, as_dict, as_obj
+        
         return qs
 
     def _process_queries(self, value):
@@ -370,6 +383,8 @@ class S(object):
                 ResultClass = DictSearchResults
             elif self.as_list:
                 ResultClass = ListSearchResults
+            elif self.as_obj:                
+                ResultClass = ObjectHybridSearchResults
             else:
                 ResultClass = ObjectSearchResults
             self._results_cache = ResultClass(self.type, hits, self.fields)
@@ -475,6 +490,24 @@ class ObjectSearchResults(SearchResults):
         self.ids = [int(r['_id']) for r in hits]
         self.objects = self.type.objects.filter(id__in=self.ids)
 
+    def __iter__(self):
+        objs = dict((obj.id, obj) for obj in self.objects)
+        return (objs[id] for id in self.ids if id in objs)
+        
+        
+class ObjectHybridSearchResults(SearchResults):
+    def set_objects(self, hits):
+        self.ids = [int(r['_id']) for r in hits]        
+        objs = dict((o.id, o) for o in self.type.objects.filter(id__in=self.ids))
+        self.objects = []
+        for h in hits:            
+            o = objs[int(h['_id'])]
+            if o.search_meta:
+                for f in self.fields:
+                   o.search_meta[f] = h['fields'].get(f,0)
+            self.objects.append(o)
+
+              
     def __iter__(self):
         objs = dict((obj.id, obj) for obj in self.objects)
         return (objs[id] for id in self.ids if id in objs)
