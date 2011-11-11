@@ -488,6 +488,8 @@ class ObjectSearchResults(SearchResults):
         
         
 class ObjectHybridSearchResults(SearchResults):
+    """  Search Results from the database that are merged with requested ES
+        fields.  Fields are saved in .search_meta hash on the object. """
     def set_objects(self, hits):
         self.ids = [int(r['_id']) for r in hits]        
         objs = dict((o.id, o) for o in self.type.objects.filter(id__in=self.ids))
