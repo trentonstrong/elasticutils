@@ -505,7 +505,7 @@ class ObjectHybridSearchResults(SearchResults):
         for h in hits:            
             o = objs.get(int(h['_id']))
             if o == None:
-                log.error("Object missing from db, but exists in ES:{0}" % h['_id'])
+                log.error("Object missing from db, but exists in ES:%s" % h['_id'])
             if o.search_meta:                
                 for f in self.fields:
                    o.search_meta[f] = h['fields'].get(f,0)
