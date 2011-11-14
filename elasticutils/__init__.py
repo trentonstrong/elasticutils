@@ -422,7 +422,7 @@ class S(object):
                 return fn(*args)
             except TimeoutError as e:
                 if statsd:
-                    statsd.increment('search.timeout.retry%s' % tries)
+                    statsd.incr('search.timeout.retry%s' % tries)
                 log.error("ES query({0}) Attempt: {3} timed out, {1}\r\n=={2}"
                         .format(args,
                             "retrying" if tries <= max_retry else "returning",
@@ -503,11 +503,14 @@ class ObjectHybridSearchResults(SearchResults):
         objs = dict((o.id, o) for o in self.type.objects.filter(id__in=self.ids))
         self.objects = []
         for h in hits:            
-            o = objs[int(h['_id'])]
+            o = objs.get(int(h['_id']))
+            if o == None:
+                log.error("Object missing from db, but exists in ES:{0}" % h['_id'])
             if o.search_meta:                
                 for f in self.fields:
                    o.search_meta[f] = h['fields'].get(f,0)
             self.objects.append(o)
+            
 
               
     def __iter__(self):
