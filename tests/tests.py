@@ -108,3 +108,4 @@ class QueryTest(TestCase):
     def teardown_class(cls):
         es = get_es()
         es.delete_index('test')
+
