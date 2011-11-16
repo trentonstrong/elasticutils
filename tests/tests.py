@@ -117,3 +117,16 @@ def test_query_type_error():
     both args and kwargs."""
     assert_raises(TypeError, S(FakeModel).query)
     assert_raises(TypeError, S(FakeModel).query, 'hey', frob='yo')
+
+
+def test_highlight_query():
+    """Assert that a ``highlight()`` call produces the right query."""
+    eq_(S(FakeModel).query(title='boof')
+                    .highlight('color', 'smell',
+                               before_match='<i>',
+                               after_match='</i>')
+                    ._build_query()['highlight'],
+        {"fields": {"color": {},
+                    "smell": {}},
+         "pre_tags": ["<i>"],
+         "post_tags": ["</i>"]})

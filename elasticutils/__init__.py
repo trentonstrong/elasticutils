@@ -169,6 +169,8 @@ class S(object):
         self.as_list = self.as_dict = False
         self._results_cache = None
         self._query_fields = set()
+        self._highlight_fields = []
+        self._highlight_options = {}
 
     def __repr__(self):
         data = list(self)[:REPR_OUTPUT_SIZE + 1]
@@ -184,6 +186,8 @@ class S(object):
             new.steps.append(next_step)
         new.start = self.start
         new.stop = self.stop
+        new._highlight_fields = self._highlight_fields
+        new._highlight_options = self._highlight_options
         return new
 
     def values(self, *fields):
@@ -236,6 +240,28 @@ class S(object):
         set.
         """
         return self._clone(next_step=('facet', kw.items()))
+
+    def highlight(self, *highlight_fields, **kwargs):
+        """Set highlight/excerpting with specified options.
+
+        This highlight will override previous highlights.
+
+        This won't let you clear it--we'd need to write a
+        ``clear_highlight()``.
+
+        :arg highlight_fields: The list of fields to highlight.
+
+        Additional keyword options:
+
+        * ``before_match`` -- Text to insert before each highlighted portion
+        * ``after_match`` -- Text to insert after each highlighted portion
+
+        """
+        # TODO: Implement `limit` kwarg if useful.
+        # TODO: Once oedipus is no longer needed in SUMO, support ranked lists
+        # of before_match and after_match tags. ES can highlight more
+        # significant stuff brighter.
+        return self._clone(next_step=('highlight', (highlight_fields, kwargs)))
 
     def query_fields(self, *args):
         """
@@ -332,6 +358,9 @@ class S(object):
                 filters.extend(_process_filters(value))
             elif action == 'facet':
                 facets.update(value)
+            elif action == 'highlight':
+                self._highlight_fields = value[0]
+                self._highlight_options = value[1]
             else:
                 raise NotImplementedError(action)
 
@@ -361,8 +390,21 @@ class S(object):
         if self.stop is not None:
             qs['size'] = self.stop - self.start
 
+        if self._highlight_fields:
+            qs['highlight'] = self._build_highlight()
+
         self.fields, self.as_list, self.as_dict = fields, as_list, as_dict
         return qs
+
+    def _build_highlight(self):
+        """Return the portion of the query that controls highlighting."""
+        options = self._highlight_options
+        ret = {'fields': dict((f, {}) for f in self._highlight_fields)}
+        if 'before_match' in options:
+            ret['pre_tags'] = [options['before_match']]
+        if 'after_match' in options:
+            ret['post_tags'] = [options['after_match']]
+        return ret
 
     def _process_queries(self, value):
         rv = []
