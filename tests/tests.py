@@ -99,6 +99,15 @@ class QueryTest(TestCase):
 
         eq_(repr(list_), repr(res))
 
+    def test_excerpt(self):
+        s = (S(FakeModel).query(foo__text='car')
+                         .filter(id=5)
+                         .highlight('tag', 'foo'))
+        result = list(s)[0]  # Get the only result.
+        # The highlit text from the foo field should be in index 1 of the
+        # excerpts.
+        eq_(s.excerpt(result)[1], u'train <em>car</em>')
+
     @classmethod
     def teardown_class(cls):
         es = get_es()
@@ -121,7 +130,7 @@ def test_query_type_error():
 
 def test_highlight_query():
     """Assert that a ``highlight()`` call produces the right query."""
-    eq_(S(FakeModel).query(title='boof')
+    eq_(S(FakeModel).query(title__text='boof')
                     .highlight('color', 'smell',
                                before_match='<i>',
                                after_match='</i>')

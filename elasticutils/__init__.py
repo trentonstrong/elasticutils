@@ -1,7 +1,8 @@
-import logging
 from functools import wraps
-from threading import local
+from itertools import izip
+import logging
 from operator import itemgetter
+from threading import local
 
 from pyes import ES, exceptions
 
@@ -263,6 +264,23 @@ class S(object):
         # significant stuff brighter.
         return self._clone(next_step=('highlight', (highlight_fields, kwargs)))
 
+    def excerpt(self, result):
+        """
+        Take a result and return the excerpts as a list of
+        unicodes--one for each highlight_field in the order specified.
+        """
+        if not self._results_cache:
+            raise ExcerptError(
+                'excerpt() was called before results were fetched.')  # test
+
+        # TODO: Maybe complain if highlight_fields are not a subset of the
+        # fields requested by a values() or values_list() call.
+
+        # Why do the highlights come in lists of (always?) length 1? That's the
+        # purpose of the [0].
+        return [result._elasticutils_highlights.get(f, [u''])[0]
+                for f in self._highlight_fields]
+
     def query_fields(self, *args):
         """
         Add to the fields that a single-arg call to ``query()`` will query.
@@ -519,6 +537,16 @@ class ObjectSearchResults(SearchResults):
         self.objects = self.type.objects.filter(id__in=self.ids)
 
     def __iter__(self):
-        objs = dict((obj.id, obj) for obj in self.objects)
-        return (objs[id] for id in self.ids if id in objs)
+        def decorate(obj, highlights):
+            """Return obj with its dict of its highlights tacked on."""
+            # There's no simple way to map from a result back to its entry in
+            # the hits hash in constant time, so we'd better annotate it now.
+            obj._elasticutils_highlights = highlights
+            # TODO: Once oedipus goes away in SUMO, perhaps a renamed
+            # _elasticutils_highlights should be the public API for
+            # getting at highlights.
+            return obj
 
+        objs = dict((obj.id, obj) for obj in self.objects)
+        return (decorate(objs[id], r.get('highlight', {})) for (id, r) in
+                izip(self.ids, self.results['hits']['hits']) if id in objs)
