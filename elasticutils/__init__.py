@@ -526,6 +526,10 @@ class DictSearchResults(SearchResults):
                         for r in hits]
 
 
+class _ListResult(list):
+    """Wrapper for a list that allows us to attach other attributes"""
+
+
 class ListSearchResults(SearchResults):
     def set_objects(self, hits):
         if self.fields:
@@ -533,7 +537,8 @@ class ListSearchResults(SearchResults):
             objs = [getter(r['fields']) for r in hits]
         else:
             objs = [r['_source'].values() for r in hits]
-        self.objects = objs
+        self.objects = [_decorate_with_highlights(_ListResult(o), h)
+                        for o, h in izip(objs, hits)]
 
 
 class ObjectSearchResults(SearchResults):

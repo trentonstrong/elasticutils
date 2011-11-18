@@ -99,15 +99,29 @@ class QueryTest(TestCase):
 
         eq_(repr(list_), repr(res))
 
-    def test_excerpt_on_object_results(self):
-        """Make sure excerpting with object-style results works."""
+    def _test_excerpt(self, method_name=None, *fields):
+        """Test excerpting with some arbitrary result format.
+
+        :arg method_name: The name of the method used to select the result
+            format. Omit for object-style results.
+        :arg fields: The arguments to pass to said method
+
+        """
         s = (S(FakeModel).query(foo__text='car')
                          .filter(id=5)
                          .highlight('tag', 'foo'))
+        if method_name:
+            # Call values_dict() or values():
+            s = getattr(s, method_name)(*fields)
         result = list(s)[0]  # Get the only result.
         # The highlit text from the foo field should be in index 1 of the
         # excerpts.
         eq_(s.excerpt(result)[1], u'train <em>car</em>')
+
+
+    def test_excerpt_on_object_results(self):
+        """Make sure excerpting with object-style results works."""
+        self._test_excerpt()
 
     def test_excerpt_on_dict_results(self):
         """Make sure excerpting with dict-style results works.
@@ -116,14 +130,16 @@ class QueryTest(TestCase):
         call, not just the ones mentioned in the query or in ``values_dict()``.
 
         """
-        s = (S(FakeModel).query(foo__text='car awesome')
-                         .filter(id=5)
-                         .highlight('tag', 'foo')
-                         .values_dict('foo'))
-        result = list(s)[0]  # Get the only result.
-        # The highlit text from the foo field should be in index 1 of the
-        # excerpts.
-        eq_(s.excerpt(result)[0], u'<em>awesome</em>')
+        self._test_excerpt('values_dict', 'foo')
+
+    def test_excerpt_on_list_results(self):
+        """Make sure excerpting with list-style results works.
+
+        Highlighting should work on all fields specified in the ``highlight()``
+        call, not just the ones mentioned in the query or in ``values_list()``.
+
+        """
+        self._test_excerpt('values', 'foo')
 
     @classmethod
     def teardown_class(cls):
