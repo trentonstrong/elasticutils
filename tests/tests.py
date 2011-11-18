@@ -99,7 +99,8 @@ class QueryTest(TestCase):
 
         eq_(repr(list_), repr(res))
 
-    def test_excerpt(self):
+    def test_excerpt_on_object_results(self):
+        """Make sure excerpting with object-style results works."""
         s = (S(FakeModel).query(foo__text='car')
                          .filter(id=5)
                          .highlight('tag', 'foo'))
@@ -107,6 +108,22 @@ class QueryTest(TestCase):
         # The highlit text from the foo field should be in index 1 of the
         # excerpts.
         eq_(s.excerpt(result)[1], u'train <em>car</em>')
+
+    def test_excerpt_on_dict_results(self):
+        """Make sure excerpting with dict-style results works.
+
+        Highlighting should work on all fields specified in the ``highlight()``
+        call, not just the ones mentioned in the query or in ``values_dict()``.
+
+        """
+        s = (S(FakeModel).query(foo__text='car awesome')
+                         .filter(id=5)
+                         .highlight('tag', 'foo')
+                         .values_dict('foo'))
+        result = list(s)[0]  # Get the only result.
+        # The highlit text from the foo field should be in index 1 of the
+        # excerpts.
+        eq_(s.excerpt(result)[0], u'<em>awesome</em>')
 
     @classmethod
     def teardown_class(cls):

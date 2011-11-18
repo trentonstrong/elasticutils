@@ -515,10 +515,15 @@ class SearchResults(object):
         return len(self.objects)
 
 
+class _DictResult(dict):
+    """Wrapper for a dict that allows us to attach other attributes"""
+
+
 class DictSearchResults(SearchResults):
     def set_objects(self, hits):
         key = 'fields' if self.fields else '_source'
-        self.objects = [r[key] for r in hits]
+        self.objects = [_decorate_with_highlights(_DictResult(r[key]), r)
+                        for r in hits]
 
 
 class ListSearchResults(SearchResults):
@@ -537,16 +542,18 @@ class ObjectSearchResults(SearchResults):
         self.objects = self.type.objects.filter(id__in=self.ids)
 
     def __iter__(self):
-        def decorate(obj, highlights):
-            """Return obj with its dict of its highlights tacked on."""
-            # There's no simple way to map from a result back to its entry in
-            # the hits hash in constant time, so we'd better annotate it now.
-            obj._elasticutils_highlights = highlights
-            # TODO: Once oedipus goes away in SUMO, perhaps a renamed
-            # _elasticutils_highlights should be the public API for
-            # getting at highlights.
-            return obj
-
         objs = dict((obj.id, obj) for obj in self.objects)
-        return (decorate(objs[id], r.get('highlight', {})) for (id, r) in
+        return (_decorate_with_highlights(objs[id], r)
+                for (id, r) in
                 izip(self.ids, self.results['hits']['hits']) if id in objs)
+
+
+def _decorate_with_highlights(obj, hit):
+    """Return obj with its dict of its highlights tacked on."""
+    # There's no simple way to map from a result back to its entry in
+    # the hits hash in constant time, so we'd better annotate it now.
+    obj._elasticutils_highlights = hit.get('highlight', {})
+    # TODO: Once oedipus goes away in SUMO, perhaps a renamed
+    # _elasticutils_highlights should be the public API for
+    # getting at highlights.
+    return obj
