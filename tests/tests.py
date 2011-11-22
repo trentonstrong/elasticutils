@@ -99,6 +99,48 @@ class QueryTest(TestCase):
 
         eq_(repr(list_), repr(res))
 
+    def _test_excerpt(self, method_name=None, *fields):
+        """Test excerpting with some arbitrary result format.
+
+        :arg method_name: The name of the method used to select the result
+            format. Omit for object-style results.
+        :arg fields: The arguments to pass to said method
+
+        """
+        s = (S(FakeModel).query(foo__text='car')
+                         .filter(id=5)
+                         .highlight('tag', 'foo'))
+        if method_name:
+            # Call values_dict() or values():
+            s = getattr(s, method_name)(*fields)
+        result = list(s)[0]  # Get the only result.
+        # The highlit text from the foo field should be in index 1 of the
+        # excerpts.
+        eq_(s.excerpt(result)[1], [u'train <em>car</em>'])
+
+
+    def test_excerpt_on_object_results(self):
+        """Make sure excerpting with object-style results works."""
+        self._test_excerpt()
+
+    def test_excerpt_on_dict_results(self):
+        """Make sure excerpting with dict-style results works.
+
+        Highlighting should work on all fields specified in the ``highlight()``
+        call, not just the ones mentioned in the query or in ``values_dict()``.
+
+        """
+        self._test_excerpt('values_dict', 'foo')
+
+    def test_excerpt_on_list_results(self):
+        """Make sure excerpting with list-style results works.
+
+        Highlighting should work on all fields specified in the ``highlight()``
+        call, not just the ones mentioned in the query or in ``values_list()``.
+
+        """
+        self._test_excerpt('values', 'foo')
+
     @classmethod
     def teardown_class(cls):
         es = get_es()
@@ -117,3 +159,16 @@ def test_query_type_error():
     both args and kwargs."""
     assert_raises(TypeError, S(FakeModel).query)
     assert_raises(TypeError, S(FakeModel).query, 'hey', frob='yo')
+
+
+def test_highlight_query():
+    """Assert that a ``highlight()`` call produces the right query."""
+    eq_(S(FakeModel).query(title__text='boof')
+                    .highlight('color', 'smell',
+                               before_match='<i>',
+                               after_match='</i>')
+                    ._build_query()['highlight'],
+        {"fields": {"color": {},
+                    "smell": {}},
+         "pre_tags": ["<i>"],
+         "post_tags": ["</i>"]})
