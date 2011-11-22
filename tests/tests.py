@@ -116,7 +116,7 @@ class QueryTest(TestCase):
         result = list(s)[0]  # Get the only result.
         # The highlit text from the foo field should be in index 1 of the
         # excerpts.
-        eq_(s.excerpt(result)[1], u'train <em>car</em>')
+        eq_(s.excerpt(result)[1], [u'train <em>car</em>'])
 
 
     def test_excerpt_on_object_results(self):

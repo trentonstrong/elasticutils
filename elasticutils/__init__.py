@@ -267,18 +267,22 @@ class S(object):
     def excerpt(self, result):
         """
         Take a result and return the excerpts as a list of
-        unicodes--one for each highlight_field in the order specified.
+        items--one for each highlight_field in the order specified.
+
+        Each item is a list of text fragments, with portions surrounded by
+        highlight markers.
+
         """
         if not self._results_cache:
             raise ExcerptError(
                 'excerpt() was called before results were fetched.')  # test
 
-        # TODO: Maybe complain if highlight_fields are not a subset of the
-        # fields requested by a values() or values_list() call.
+        # To enforce oedipus compatibility, we could complain if
+        # highlight_fields are not a subset of the fields requested by a
+        # values() or values_list() call, but ES has no need for such a
+        # restriction.
 
-        # Why do the highlights come in lists of (always?) length 1? That's the
-        # purpose of the [0].
-        return [result._elasticutils_highlights.get(f, [u''])[0]
+        return [result._elasticutils_highlights.get(f, [u''])
                 for f in self._highlight_fields]
 
     def query_fields(self, *args):
@@ -560,5 +564,6 @@ def _decorate_with_highlights(obj, hit):
     obj._elasticutils_highlights = hit.get('highlight', {})
     # TODO: Once oedipus goes away in SUMO, perhaps a renamed
     # _elasticutils_highlights should be the public API for
-    # getting at highlights.
+    # getting at highlights. The FlightDeck branch uses a search_meta hash on
+    # each instance for such things; maybe do that.
     return obj
