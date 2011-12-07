@@ -605,3 +605,9 @@ def _decorate_with_highlights(obj, hit):
     # getting at highlights. The FlightDeck branch uses a search_meta hash on
     # each instance for such things; maybe do that.
     return obj
+
+
+class ExcerptError(Exception):
+    """Exception raised if ``S.excerpt()`` is called before results are fetched
+    """
+    pass
