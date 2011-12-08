@@ -219,4 +219,5 @@ def test_highlight_query():
         {"fields": {"color": {},
                     "smell": {}},
          "pre_tags": ["<i>"],
-         "post_tags": ["</i>"]})
+         "post_tags": ["</i>"],
+         'order': 'score'})

@@ -446,7 +446,8 @@ class S(object):
     def _build_highlight(self):
         """Return the portion of the query that controls highlighting."""
         options = self._highlight_options
-        ret = {'fields': dict((f, {}) for f in self._highlight_fields)}
+        ret = {'fields': dict((f, {}) for f in self._highlight_fields),
+               'order': 'score'}
         if 'before_match' in options:
             ret['pre_tags'] = [options['before_match']]
         if 'after_match' in options:
