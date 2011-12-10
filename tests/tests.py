@@ -93,6 +93,10 @@ class QueryTest(TestCase):
         tag_counts = dict((t['term'], t['count']) for t in qs.facets['tags'])
 
         eq_(tag_counts, dict(awesome=3, boring=1, boat=1))
+        
+    def test_facet_query(self):
+        qs = S(FakeModel).facet(awesome_tag={'query': {'term': {'tag': 'awesome' }}})
+        eq_(qs.facets['awesome_tag'], 3)
 
     def test_order_by(self):
         res = S(FakeModel).filter(tag='awesome').order_by('-width')
