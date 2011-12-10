@@ -421,6 +421,8 @@ class S(object):
                 facets[key] = [v for v in val['terms']]
             elif val['_type'] == 'range':
                 facets[key] = [v for v in val['ranges']]
+            elif val['_type'] == 'query':
+                facets[key] = val['count']
         return facets
 
 
