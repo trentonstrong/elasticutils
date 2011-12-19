@@ -8,3 +8,5 @@ django
 -e git://github.com/mozilla/nuggets.git#egg=nuggets
 celery
 
+# needed for django-cronjobs
+-e git://github.com/jsocol/django-cronjobs#egg=django-cronjobs
