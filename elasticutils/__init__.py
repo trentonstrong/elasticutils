@@ -4,6 +4,8 @@ from threading import local
 from operator import itemgetter
 
 from pyes import ES, exceptions
+from utils import retry_on_timeout
+
 
 from pyes.es import thrift_enable
 from time import sleep
@@ -495,9 +497,8 @@ class ObjectHybridSearchResults(SearchResults):
                 for f in self.fields:
                    o.search_meta[f] = h['fields'].get(f,0)
             self.objects.append(o)
-            
-
               
     def __iter__(self):
         objs = dict((obj.id, obj) for obj in self.objects)
         return (objs[id] for id in self.ids if id in objs)
+
