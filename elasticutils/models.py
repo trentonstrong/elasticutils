@@ -3,10 +3,16 @@ from django.conf import settings
 from pyes import djangoutils
 
 import elasticutils
+from elasticutils import S
+
 
 
 class SearchMixin(object):
     """This mixin correlates a Django model to an ElasticSearch index."""
+    
+    def __init__(self):
+        """Dictionary for storing calculated ES fields on the object."""
+        self.search_meta = { 'id': 0 }
 
     @classmethod
     def _get_index(cls):
@@ -31,6 +37,11 @@ class SearchMixin(object):
     def unindex(cls, id):
         """Removes a particular item from the search index."""
         elasticutils.get_es().delete(cls._get_index(), cls._meta.db_table, id)
+
+    @classmethod
+    def search(cls):
+        """Shortcut to elasticutils search wrapper."""
+        return S(cls)
 
     def fields(self):
         """Returns a serialization of a Model instance.

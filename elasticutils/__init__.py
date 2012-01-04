@@ -501,14 +501,3 @@ class ObjectHybridSearchResults(SearchResults):
     def __iter__(self):
         objs = dict((obj.id, obj) for obj in self.objects)
         return (objs[id] for id in self.ids if id in objs)
-
-
-
-class SearchMixin(object):
-
-    def __init__(self):
-        self.search_meta = { 'id': 0 }
-    
-    @classmethod
-    def search(cls):
-        return S(cls)
