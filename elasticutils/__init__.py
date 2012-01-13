@@ -376,7 +376,7 @@ class S(object):
         filters = []
         queries = []
         sort = []
-        fields = ['id']
+        fields = []
         facets = {}
         as_list = as_dict = False
         for action, value in self.steps:
@@ -421,6 +421,12 @@ class S(object):
             qs['query'] = {'bool': {'must': queries}}
         elif queries:
             qs['query'] = queries[0]
+
+        # Add ID into fields if necessary:
+        if (as_list or (as_dict and fields)) and 'id' not in fields:
+            fields.append('id')
+        elif not (as_list or as_dict):
+            fields.append('id')
 
         if fields:
             qs['fields'] = fields

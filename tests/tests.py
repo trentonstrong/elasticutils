@@ -221,3 +221,62 @@ def test_highlight_query():
          "pre_tags": ["<i>"],
          "post_tags": ["</i>"],
          'order': 'score'})
+
+
+def test_values_dict_no_args():
+    """Calling ``values_dict()`` with no args implicitly fetches all fields."""
+    eq_(S(FakeModel).query(fld1=2)
+                    .values_dict()
+                    ._build_query(),
+        {"query":
+            {"term": {"fld1": 2}}})
+
+
+def test_values_no_args():
+    """Calling ``values()`` with no args fetches only ID."""
+    eq_(S(FakeModel).query(fld1=2)
+                    .values()
+                    ._build_query(),
+        {'query':
+            {"term": {"fld1": 2}},
+         'fields': ['id']})
+
+
+def test_values_dict_id():
+    """Calling ``values_dict('id')`` shouldn't return the ID field twice."""
+    eq_(S(FakeModel).query(fld1=2)
+                    .values_dict('id')
+                    ._build_query(),
+        {'query':
+            {"term": {"fld1": 2}},
+         'fields': ['id']})
+
+
+def test_values_id():
+    """Calling ``values('id')`` shouldn't return the ID field twice."""
+    eq_(S(FakeModel).query(fld1=2)
+                    .values('id')
+                    ._build_query(),
+        {'query':
+            {"term": {"fld1": 2}},
+         'fields': ['id']})
+
+
+def test_values_dict_implicit_id():
+    """Calling ``values_dict()`` always fetches ID."""
+    eq_(S(FakeModel).query(fld1=2)
+                    .values_dict('thing')
+                    ._build_query(),
+        {'query':
+            {"term": {"fld1": 2}},
+         'fields': ['thing', 'id']})
+
+
+def test_values_implicit_id():
+    """Calling ``values()`` always fetches ID."""
+    eq_(S(FakeModel).query(fld1=2)
+                    .values('thing')
+                    ._build_query(),
+        {'query':
+            {"term": {"fld1": 2}},
+         'fields': ['thing', 'id']})
